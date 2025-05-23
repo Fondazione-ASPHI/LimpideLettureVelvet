@@ -23,6 +23,7 @@
   const prompt = promptTemplate.replace("{parola}", selected).replace("{testo}", testo);
 
   try {
+    document.getElementById("statoVelvet").textContent = "⏳ Sto pensando...";
     const res = await fetch("http://localhost:8000/api/velvet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -33,6 +34,9 @@
   } catch (err) {
     console.error("Errore selezione:", err);
     alert("❌ Errore nella richiesta.");
+  }
+  finally {
+    document.getElementById("statoVelvet").textContent = "";
   }
 }
 
@@ -105,7 +109,9 @@ window.addEventListener("DOMContentLoaded", () => {
     <option value="basecompleto.json">De Mauro – Base Completo</option>
   </select>
 
-  <textarea id="inputText" rows="10"></textarea>
+  <label for="inputText" style="font-weight: bold;">📝 Incolla o scrivi qui il testo:</label>
+<textarea id="inputText" rows="10"></textarea>
+
 
 
 <button onclick="eseguiAnalisi('explain')" class="grande-bottone">🧩 Parole Difficili</button>
@@ -134,7 +140,7 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
   
 
  
-
+  <div id="statoVelvet" style="margin-top: 10px; font-style: italic; color: #555;"></div>
   <div class="output" id="output"></div>
   <div class="explanation" id="explanationBox"></div>
   <div class="gulpease" id="gulpeaseBox"></div>
@@ -167,6 +173,9 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
         alert("Errore nel caricamento del vocabolario.");
         console.error(err);
       }
+      finally {
+    document.getElementById("statoVelvet").textContent = "";
+  }
     }
 
     function isParolaDifficile(parola) {
@@ -222,6 +231,7 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
 
       const prompt = `${promptPersonalizzato}\n\n"${testo}"`;
       try {
+        document.getElementById("statoVelvet").textContent = "⏳ Sto pensando...";
         const res = await fetch("http://localhost:8000/api/velvet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -233,6 +243,9 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
         console.error("Errore:", err);
         output.textContent = "❌ Errore nella richiesta.";
       }
+      finally {
+    document.getElementById("statoVelvet").textContent = "";
+  }
     }
 
     async function spiegaElemento(parola) {
@@ -240,6 +253,7 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
   const promptTemplate = document.getElementById("promptExplain").value;
   const prompt = promptTemplate.replace("{parola}", parola).replace("{testo}", testo);
   try {
+    document.getElementById("statoVelvet").textContent = "⏳ Sto pensando...";
     const res = await fetch("http://localhost:8000/api/velvet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -250,6 +264,9 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
       } catch (err) {
         console.error("Errore nella spiegazione.", err);
       }
+      finally {
+    document.getElementById("statoVelvet").textContent = "";
+  }
     }
 
     async function inviaDomandaChatbot() {
@@ -260,6 +277,7 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
       const promptTemplate = document.getElementById("promptChat").value;
       const prompt = promptTemplate.replace("{testo}", testo).replace("{domanda}", domanda);
       try {
+        document.getElementById("statoVelvet").textContent = "⏳ Sto pensando...";
         const res = await fetch("http://localhost:8000/api/velvet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -271,6 +289,9 @@ Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
         console.error("Errore chatbot:", err);
         document.getElementById("chatOutput").textContent = "❌ Errore nella richiesta.";
       }
+      finally {
+    document.getElementById("statoVelvet").textContent = "";
+  }
     }
   function togglePromptEditor() {
   const popup = document.getElementById("promptPopup");
