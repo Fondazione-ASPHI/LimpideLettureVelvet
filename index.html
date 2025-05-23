@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+   <meta charset="UTF-8">
+  <title>Limpide Letture (Velvet 2B)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.png" type="image/png">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>async function spiegaSelezione() {
+  const textarea = document.getElementById("inputText");
+  const promptTemplate = document.getElementById("promptExplain").value;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.substring(start, end).trim();
+  const testo = textarea.value;
+
+  if (!selected) {
+    alert("Seleziona una parte del testo nel box.");
+    return;
+  }
+
+  const prompt = promptTemplate.replace("{parola}", selected).replace("{testo}", testo);
+
+  try {
+    const res = await fetch("http://localhost:8000/api/velvet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }], temperature: 0.3 })
+    });
+    const data = await res.json();
+    aggiungiSpiegazioneSidebar(selected, data.choices?.[0]?.message?.content || "Nessuna risposta.");
+  } catch (err) {
+    console.error("Errore selezione:", err);
+    alert("❌ Errore nella richiesta.");
+  }
+}
+
+function aggiungiSpiegazioneSidebar(testo, spiegazione) {
+  const sidebar = document.getElementById("explanationSidebar");
+
+  const contenitore = document.createElement("div");
+  contenitore.style.position = "relative";
+  contenitore.style.padding = "0.5em";
+  contenitore.style.marginBottom = "0.8em";
+  contenitore.style.background = "#fff";
+  contenitore.style.border = "1px solid #ccc";
+  contenitore.style.borderLeft = "5px solid #e85d26";
+  contenitore.style.borderRadius = "6px";
+
+  const chiudi = document.createElement("button");
+  chiudi.textContent = "❌";
+  chiudi.style.position = "absolute";
+  chiudi.style.top = "5px";
+  chiudi.style.right = "5px";
+  chiudi.style.border = "none";
+  chiudi.style.background = "transparent";
+  chiudi.style.cursor = "pointer";
+  chiudi.title = "Elimina questa spiegazione";
+  chiudi.onclick = () => contenitore.remove();
+
+  const paragrafo = document.createElement("p");
+  paragrafo.innerHTML = `<strong>${testo}</strong>:<br>${spiegazione}`;
+
+  contenitore.appendChild(chiudi);
+  contenitore.appendChild(paragrafo);
+  sidebar.appendChild(contenitore);
+}
+</script>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("promptEditor").addEventListener("input", () => localStorage.setItem("promptSemplifica", document.getElementById("promptEditor").value));
+  document.getElementById("promptExplain").addEventListener("input", () => localStorage.setItem("promptSpiega", document.getElementById("promptExplain").value));
+  document.getElementById("promptChat").addEventListener("input", () => localStorage.setItem("promptChat", document.getElementById("promptChat").value));
+});
+</script>
+  <style>
+    .grande-bottone {
+  font-size: 1.2rem;
+  padding: 0.6em 1.2em;
+  margin-bottom: 0.5em;
+  width: auto;
+  display: inline-block;
+}
+
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea, button, select, input[type='number'] { width: 100%; margin-top: 10px; font-size: 1rem; }
+    .output, .explanation, .gulpease { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; white-space: pre-wrap; }
+    .highlight { color: red; font-weight: bold; cursor: pointer; }
+    .gulpease-highlight { border-bottom: 3px solid red; cursor: pointer; }
+    #chatbotDialog { position: fixed; bottom: 20px; right: 20px; background: #fff; border: 1px solid #ccc; padding: 10px; width: 300px; z-index: 1000; box-shadow: 0 0 10px rgba(0,0,0,0.2); display: none; }
+  </style>
+</head>
+<body>
+<div style="display: flex; align-items: flex-start;">
+  <div style="flex: 3; padding-right: 20px;">
+  <h1>Limpide Letture (Velvet 2B)</h1>
+
+  <label for="vocabularySelect">📚 Seleziona vocabolario:</label>
+  <select id="vocabularySelect" onchange="caricaVocabolario()">
+    <option value="">-- Nessuno --</option>
+    <option value="fondamentale.json">De Mauro – Fondamentale</option>
+    <option value="altouso.json">De Mauro – Alto uso</option>
+    <option value="altadisponibilita.json">De Mauro – Alta disponibilità</option>
+    <option value="basecompleto.json">De Mauro – Base Completo</option>
+  </select>
+
+  <textarea id="inputText" rows="10"></textarea>
+
+
+<button onclick="eseguiAnalisi('explain')" class="grande-bottone">🧩 Parole Difficili</button>
+<button onclick="eseguiAnalisi('gulpease')" class="grande-bottone">🔴 Frasi complesse (Gulpease)</button>
+<button onclick="spiegaSelezione()" class="grande-bottone">🟨 Spiega testo evidenziato</button>
+<button onclick="eseguiAnalisi('simplify')" class="grande-bottone">✍️ Semplifica il Testo</button>
+<button onclick="document.getElementById('chatbotDialog').style.display='block'" class="grande-bottone">💬 Chat LucIA</button>
+<button onclick="togglePromptEditor()" class="grande-bottone">⚙️ Impostazioni</button>
+
+ 
+  
+  <div id="promptPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; border:2px solid #ccc; padding:20px; z-index:2000; width:90%; max-width:500px; box-shadow:0 0 10px rgba(0,0,0,0.3);">
+  <h3>⚙️ Modifica Prompt</h3>
+  <label for="promptEditor">✍️ Prompt semplificazione:</label>
+  <textarea id="promptEditor" rows="4" style="width:100%">Riscrivi il seguente testo in modo semplice, comprensibile a un parlante di italiano a livello A1, con parole facili e frasi brevi:</textarea>
+  <label for="promptExplain">🧩 🔴 Prompt spiegazione parole e frasi:</label>
+  <textarea id="promptExplain" rows="3" style="width:100%">Spiega la parola o frase: "{parola}" nel contesto: {testo}</textarea>
+  <label for="promptChat">💬 Prompt ChatLucia:</label>
+  <textarea id="promptChat" rows="3" style="width:100%">Testo: "{testo}"
+Domanda: "{domanda}"
+Rispondi in modo semplice e chiaro, adatto a un livello A1.</textarea>
+<label for="gulpeaseThreshold">Soglia Gulpease (0-100):</label>
+  <input type="number" id="gulpeaseThreshold" value="60" min="0" max="100">
+  <button onclick="document.getElementById('promptPopup').style.display='none'">❌ Chiudi</button>
+</div>
+  
+
+ 
+
+  <div class="output" id="output"></div>
+  <div class="explanation" id="explanationBox"></div>
+  <div class="gulpease" id="gulpeaseBox"></div>
+
+  </div>
+  <aside id="explanationSidebar" style="flex: 1; padding: 1em; background: #fef9e7; border-left: 3px solid #e85d26; height: 100vh; overflow-y: auto;">
+    <h3>🧠 Spiegazioni</h3>
+  </aside>
+</div>
+<div id="chatbotDialog">
+    <strong>LucIA - Chat Linguistica</strong>
+    <button style="float:right" onclick="document.getElementById('chatbotDialog').style.display='none'">❌</button>
+    <textarea id="chatInput" rows="2" style="width:100%"></textarea>
+    <button onclick="inviaDomandaChatbot()">Invia</button>
+    <div id="chatOutput" style="margin-top:80px;"></div>
+  </div>
+
+  <script>
+    let lemmiSet = new Set();
+
+    async function caricaVocabolario() {
+      const file = document.getElementById("vocabularySelect").value;
+      if (!file) return;
+      try {
+        const res = await fetch(file);
+        const data = await res.json();
+        lemmiSet = new Set(data.map(p => p.toLowerCase()));
+        alert(`Vocabolario "${file}" caricato con ${lemmiSet.size} parole.`);
+      } catch (err) {
+        alert("Errore nel caricamento del vocabolario.");
+        console.error(err);
+      }
+    }
+
+    function isParolaDifficile(parola) {
+      return parola && !lemmiSet.has(parola.toLowerCase());
+    }
+
+    async function eseguiAnalisi(tipo) {
+      const testo = document.getElementById("inputText").value.trim();
+      const opzione = tipo;
+      const soglia = parseInt(document.getElementById("gulpeaseThreshold").value) || 60;
+      const promptPersonalizzato = document.getElementById("promptEditor").value;
+      const output = document.getElementById("output");
+      const explanationBox = document.getElementById("explanationBox");
+      const gulpeaseBox = document.getElementById("gulpeaseBox");
+      output.innerHTML = explanationBox.innerHTML = gulpeaseBox.innerHTML = "";
+
+      if (!testo) return alert("Inserisci un testo.");
+
+      if (opzione === "gulpease") {
+        const frasi = testo.match(/[^.!?]+[.!?]*/g) || [testo];
+        for (let i = 0; i < frasi.length; i++) {
+          const frase = frasi[i].trim();
+          const score = 89 + (300 * 1 - 10 * frase.replace(/[^a-zA-ZÀ-ÿ]/g, '').length) / frase.split(/\s+/).length;
+          if (score < soglia) {
+            const span = document.createElement("span");
+            span.className = "gulpease-highlight";
+            span.textContent = frase + ` (${Math.round(score)})`;
+            span.onclick = () => spiegaElemento(frase);
+            gulpeaseBox.appendChild(span);
+            gulpeaseBox.appendChild(document.createElement("br"));
+          }
+        }
+        return;
+      }
+
+      if (opzione === "explain") {
+        const parole = testo.split(/\s+/);
+        for (let parola of parole) {
+          const pulita = parola.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+          if (isParolaDifficile(pulita)) {
+            const span = document.createElement("span");
+            span.className = "highlight";
+            span.textContent = pulita;
+            span.onclick = () => spiegaElemento(pulita);
+            output.appendChild(span);
+            output.appendChild(document.createTextNode(" "));
+          } else {
+            output.appendChild(document.createTextNode(parola + " "));
+          }
+        }
+        return;
+      }
+
+      const prompt = `${promptPersonalizzato}\n\n"${testo}"`;
+      try {
+        const res = await fetch("http://localhost:8000/api/velvet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [{ role: "user", content: prompt }], temperature: 0.4 })
+        });
+        const data = await res.json();
+        output.textContent = data.choices?.[0]?.message?.content || "Nessuna risposta.";
+      } catch (err) {
+        console.error("Errore:", err);
+        output.textContent = "❌ Errore nella richiesta.";
+      }
+    }
+
+    async function spiegaElemento(parola) {
+  const testo = document.getElementById("inputText").value.trim();
+  const promptTemplate = document.getElementById("promptExplain").value;
+  const prompt = promptTemplate.replace("{parola}", parola).replace("{testo}", testo);
+  try {
+    const res = await fetch("http://localhost:8000/api/velvet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }], temperature: 0.3 })
+    });
+    const data = await res.json();
+    aggiungiSpiegazioneSidebar(parola, data.choices?.[0]?.message?.content || "Nessuna risposta.");
+      } catch (err) {
+        console.error("Errore nella spiegazione.", err);
+      }
+    }
+
+    async function inviaDomandaChatbot() {
+      const domanda = document.getElementById("chatInput").value.trim();
+      const testo = document.getElementById("inputText").value.trim();
+      if (!domanda) return;
+
+      const promptTemplate = document.getElementById("promptChat").value;
+      const prompt = promptTemplate.replace("{testo}", testo).replace("{domanda}", domanda);
+      try {
+        const res = await fetch("http://localhost:8000/api/velvet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [{ role: "user", content: prompt }], temperature: 0.3 })
+        });
+        const data = await res.json();
+        document.getElementById("chatOutput").textContent = data.choices?.[0]?.message?.content || "Nessuna risposta.";
+      } catch (err) {
+        console.error("Errore chatbot:", err);
+        document.getElementById("chatOutput").textContent = "❌ Errore nella richiesta.";
+      }
+    }
+  function togglePromptEditor() {
+  const popup = document.getElementById("promptPopup");
+  popup.style.display = popup.style.display === "none" ? "block" : "none";
+  document.getElementById("promptEditor").value = localStorage.getItem("promptSemplifica") || document.getElementById("promptEditor").value;
+  document.getElementById("promptExplain").value = localStorage.getItem("promptSpiega") || document.getElementById("promptExplain").value;
+  document.getElementById("promptChat").value = localStorage.getItem("promptChat") || document.getElementById("promptChat").value;
+}  
+</script>
+</body>
+ <header>
+        
+        <img src="logo.png" alt="Icona Limpide Letture" style="vertical-align: middle; height: 1.8em; margin-right: 10px;">
+        <span style="vertical-align: middle;">Limpide Letture -  per l'accessibilità, l'apprendimento e la comprensione dei testi - di ASPHI Onlus</span>
+        <a href="https://www.asphi.it" target="_blank" style="display: inline-block; margin-right: 10px;">
+            <img src="logo_asphi.png" alt="Logo ASPHI" style="height: 2em; vertical-align: middle;">
+          </a>
+                
+          
+      </header>
+</html>
